@@ -1,0 +1,692 @@
+:root {
+  /* Liquid Obsidian & macOS Tahoe - Color Palette */
+  --bg-primary: #06070a;
+  --bg-surface: rgba(255, 255, 255, 0.03);
+  --bg-surface-elevated: rgba(255, 255, 255, 0.05);
+  
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(255, 255, 255, 0.28);
+  
+  --text-primary: #ffffff;
+  --text-secondary: #e3e1e9;
+  --text-muted: #8e9192;
+  
+  /* Brand Accents */
+  --color-primary: #ffffff;
+  --color-primary-glow: rgba(255, 255, 255, 0.12);
+  
+  /* Tahoe neon status values */
+  --status-ok: #4de082;        /* Emerald Green 🟢 */
+  --status-ok-glow: rgba(77, 224, 130, 0.16);
+  --status-warn: #ffb95f;      /* Orange Warning 🟡 */
+  --status-warn-glow: rgba(255, 185, 95, 0.18);
+  --status-critical: #ffb4ab;  /* Rose Danger 🔴 */
+  --status-critical-glow: rgba(255, 180, 171, 0.18);
+  
+  /* Special Alerts */
+  --status-amber-speed: #f59e0b;
+  --status-amber-speed-glow: rgba(245, 158, 11, 0.18);
+  
+  /* Typography & Radius */
+  --font-display: 'Manrope', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-tabular: 'Geist Mono', monospace;
+  
+  --radius-sm: 8px;
+  --radius-md: 16px;  /* Tahoe Button/Input Spec */
+  --radius-lg: 24px;  /* Tahoe Card Spec */
+  --radius-full: 9999px;
+  
+  --transition-fast: 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Global Reset & Base Styling */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  min-height: 100vh;
+}
+
+/* Animated fluid blobs for premium iOS 26 translucency */
+body::before {
+  content: '';
+  position: fixed;
+  top: -10%;
+  left: -10%;
+  width: 60%;
+  height: 60%;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.24) 0%, transparent 70%);
+  filter: blur(80px);
+  z-index: -2;
+  animation: orbMove1 24s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -10%;
+  right: -10%;
+  width: 70%;
+  height: 70%;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.18) 0%, transparent 70%);
+  filter: blur(95px);
+  z-index: -2;
+  animation: orbMove2 28s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes orbMove1 {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(25vw, 15vh) scale(1.25); }
+  100% { transform: translate(-10vw, 35vh) scale(0.9); }
+}
+
+@keyframes orbMove2 {
+  0% { transform: translate(0, 0) scale(1.15); }
+  50% { transform: translate(-30vw, -20vh) scale(0.95); }
+  100% { transform: translate(20vw, -10vh) scale(1.25); }
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+input, button, select, textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  user-select: text;
+}
+
+/* Typography Utilities */
+h1 { font-family: var(--font-display); font-size: 26px; font-weight: 800; letter-spacing: -0.03em; }
+h2 { font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+h3 { font-family: var(--font-display); font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+p { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+
+/* Safe area support */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding-top: calc(env(safe-area-inset-top, 44px) + 12px);
+  padding-bottom: calc(env(safe-area-inset-bottom, 34px) + 84px); /* safe-area + floating dock height */
+  padding-left: calc(env(safe-area-inset-left, 0px) + 20px);
+  padding-right: calc(env(safe-area-inset-right, 0px) + 20px);
+  max-width: 440px; /* Constrained width for premium centered mobile design */
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* High-fidelity iOS 26 Liquid Glass Card Implementation */
+.glass-card {
+  background: rgba(18, 20, 29, 0.42) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.11) !important;
+  border-radius: var(--radius-lg); /* 24px */
+  padding: 22px;
+  margin-bottom: 18px;
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.18),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.02),
+    0 16px 40px rgba(0, 0, 0, 0.55);
+  transition: var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Shimmer reflection gloss sweep */
+.glass-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(255, 255, 255, 0.01) 30%,
+    rgba(255, 255, 255, 0.07) 50%,
+    rgba(255, 255, 255, 0.01) 70%,
+    transparent 100%
+  );
+  transform: skewX(-25deg);
+  transition: transform 0.8s ease;
+  pointer-events: none;
+}
+
+.glass-card:hover::before {
+  transform: translate(250%) skewX(-25deg);
+}
+
+.glass-card:active {
+  transform: scale(0.98);
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Premium Floating Dock Tab Bar */
+.nav-bar {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 34px) + 8px);
+  left: 20px;
+  right: 20px;
+  height: 64px;
+  background: rgba(18, 19, 24, 0.55);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: var(--radius-full);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 1000;
+  max-width: 400px;
+  margin: 0 auto;
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.15),
+    0 16px 40px rgba(0, 0, 0, 0.5);
+  padding: 0 10px;
+}
+
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  width: 22%;
+  height: 80%;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  position: relative;
+}
+
+.nav-item.active {
+  color: var(--status-ok);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.nav-item.active::after {
+  content: '';
+  width: 4px;
+  height: 4px;
+  background: var(--status-ok);
+  border-radius: 50%;
+  margin-top: 3px;
+  box-shadow: 0 0 8px var(--status-ok);
+}
+
+.nav-item svg {
+  margin-bottom: 2px;
+  stroke-width: 2.2px; /* Line-art weight */
+  transition: var(--transition-fast);
+}
+
+.nav-item.active svg {
+  transform: translateY(-1px);
+}
+
+/* Premium Action Buttons - Stitch Specs */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 24px;
+  border-radius: var(--radius-md); /* 16px */
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary {
+  background: #ffffff; /* Solid white */
+  color: #000000; /* Black text */
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.15);
+}
+
+.btn-primary:active {
+  background: #e2e2e2;
+  transform: scale(0.97);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.btn-secondary:active {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(0.97);
+}
+
+.btn-danger {
+  background: var(--status-critical-glow);
+  color: var(--status-critical);
+  border: 1px solid var(--status-critical);
+}
+
+.btn-danger:active {
+  background: rgba(248, 113, 113, 0.25);
+  transform: scale(0.97);
+}
+
+/* Form Controls - Stitch Specs */
+.form-group {
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.form-control {
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: var(--radius-md); /* 16px */
+  padding: 16px;
+  color: var(--text-primary);
+  outline: none;
+  font-family: var(--font-body);
+  transition: var(--transition-fast);
+  width: 100%;
+}
+
+.form-control:focus {
+  border-color: var(--border-focus) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Slide Switch / Segmented Control */
+.segmented-control {
+  display: flex;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-md); /* 16px */
+  padding: 5px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border-color);
+}
+
+.segmented-option {
+  flex: 1;
+  text-align: center;
+  padding: 12px;
+  font-size: 13px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  border-radius: calc(var(--radius-md) - 4px);
+  cursor: pointer;
+  transition: var(--transition-normal);
+  color: var(--text-secondary);
+}
+
+.segmented-option.active {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.segmented-option.active.ingreso {
+  background: var(--status-ok);
+  color: #000000;
+}
+
+.segmented-option.active.gasto {
+  background: var(--status-critical);
+  color: #ffffff;
+}
+
+/* Tabular Financial Lists (Geist Typographic Spec) */
+.tabular-number {
+  font-family: var(--font-tabular);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* Double Progress Bar (Speed Alerts / Spent Projections) */
+.progress-container {
+  margin-top: 14px;
+  margin-bottom: 10px;
+}
+
+.progress-track {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-full);
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar-solid {
+  height: 100%;
+  border-radius: var(--radius-full);
+  position: absolute;
+  left: 0;
+  top: 0;
+  transition: width 0.6s cubic-bezier(0.1, 0.8, 0.2, 1);
+  box-shadow: 0 0 10px currentColor; /* Glowing effect */
+}
+
+.progress-bar-dotted {
+  height: 100%;
+  border-radius: var(--radius-full);
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0.45;
+  background-image: repeating-linear-gradient(
+    90deg,
+    currentColor,
+    currentColor 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  transition: width 0.6s cubic-bezier(0.1, 0.8, 0.2, 1);
+}
+
+/* Liquid Fill Effect for Main Card */
+.liquid-fill {
+  position: relative;
+  overflow: hidden;
+}
+
+.liquid-fill::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, rgba(77, 224, 130, 0.18), rgba(255, 255, 255, 0.04));
+  animation: liquidRotate 12s linear infinite;
+  border-radius: 40%;
+  pointer-events: none;
+}
+
+@keyframes liquidRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Card Stack Animation (Tarjetas tab) */
+.card-stack-container {
+  perspective: 1000px;
+  position: relative;
+  height: 240px;
+  margin-bottom: 24px;
+}
+
+.card-item {
+  position: absolute;
+  width: 100%;
+  height: 200px;
+  border-radius: 24px;
+  padding: 24px;
+  transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.4s ease, box-shadow 0.4s ease;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+}
+
+.card-active {
+  transform: translateY(0) scale(1) rotateX(0deg);
+  z-index: 30;
+  opacity: 1;
+}
+
+.card-behind-1 {
+  transform: translateY(-16px) scale(0.93) rotateX(-5deg);
+  z-index: 20;
+  opacity: 0.65;
+}
+
+.card-behind-2 {
+  transform: translateY(-32px) scale(0.86) rotateX(-8deg);
+  z-index: 10;
+  opacity: 0.35;
+}
+
+/* Status Badges - Pill Chips */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge-ok {
+  background: var(--status-ok-glow);
+  color: var(--status-ok);
+  border: 1px solid rgba(77, 224, 130, 0.2);
+}
+
+.badge-warn {
+  background: var(--status-warn-glow);
+  color: var(--status-warn);
+  border: 1px solid rgba(255, 185, 95, 0.25);
+}
+
+.badge-critical {
+  background: var(--status-critical-glow);
+  color: var(--status-critical);
+  border: 1px solid rgba(255, 180, 171, 0.25);
+}
+
+/* Premium Amber Speed Alert Banner */
+.alert-banner {
+  display: flex;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md); /* 16px */
+  margin-bottom: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  background: rgba(245, 158, 11, 0.08) !important;
+  color: var(--status-amber-speed) !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.05),
+    0 8px 24px rgba(245, 158, 11, 0.05);
+}
+
+/* Toast Message Overlay */
+.toast-container {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 44px) + 16px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  width: calc(100% - 40px);
+  max-width: 360px;
+  pointer-events: none;
+}
+
+.toast {
+  background: rgba(20, 21, 28, 0.92);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 14px 20px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transform: translateY(-20px);
+  opacity: 0;
+  animation: toastNotification 3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes toastNotification {
+  0% { transform: translateY(-20px); opacity: 0; }
+  10% { transform: translateY(0); opacity: 1; }
+  90% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-20px); opacity: 0; }
+}
+
+/* PIN Access screen */
+.pin-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-primary);
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.pin-dots {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 56px;
+}
+
+.pin-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-full);
+  border: 2px solid var(--text-muted);
+  transition: var(--transition-fast);
+}
+
+.pin-dot.filled {
+  background: #ffffff;
+  border-color: #ffffff;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.6);
+}
+
+.pin-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.pin-key {
+  aspect-ratio: 1;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.pin-key:active {
+  background: rgba(255, 255, 255, 0.12);
+  transform: scale(0.94);
+}
+
+/* Modals */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-content {
+  background: #14161f;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg); /* 24px */
+  padding: 24px;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  animation: modalIn 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes modalIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--text-muted);
+  border-radius: 2px;
+}
+
+/* Tahoe Glass Panel Style Guidelines */
+.glass-panel {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    inset 0 1px 1px rgba(255, 255, 255, 0.16),
+    0 8px 32px 0 rgba(0, 0, 0, 0.35);
+  transition: all 0.2s ease;
+}
+
+.neon-glow {
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.35);
+}
