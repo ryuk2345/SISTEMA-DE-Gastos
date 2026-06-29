@@ -217,7 +217,7 @@ export default function History({ refreshTrigger, onUpdate }) {
                 </div>
 
                 {/* Actions and Amount */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>que
                   <span 
                     className="tabular-number"
                     style={{ 
