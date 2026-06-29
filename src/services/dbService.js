@@ -108,7 +108,12 @@ export const dbService = {
   async getConfig() {
     if (isSupabaseEnabled) {
       const { data, error } = await supabase.from('configuracion').select('*').eq('id', 1).single();
-      if (error) throw error;
+      if (error || !data) {
+        console.warn('configuracion table empty or error, using defaults:', error?.message);
+        // Auto-insert default config so next load works
+        await supabase.from('configuracion').upsert({ id: 1, ...SEED_CONFIG }).select().single();
+        return SEED_CONFIG;
+      }
       return data;
     } else {
       return getLocal('finanzas_configuracion', SEED_CONFIG);
@@ -132,7 +137,10 @@ export const dbService = {
   async getCategories() {
     if (isSupabaseEnabled) {
       const { data, error } = await supabase.from('categorias').select('*').order('nombre', { ascending: true });
-      if (error) throw error;
+      if (error || !data || data.length === 0) {
+        console.warn('categorias table empty or error, using seed defaults:', error?.message);
+        return SEED_CATEGORIES;
+      }
       return data;
     } else {
       return getLocal('finanzas_categorias', SEED_CATEGORIES);
@@ -178,8 +186,11 @@ export const dbService = {
   async getMovements() {
     if (isSupabaseEnabled) {
       const { data, error } = await supabase.from('movimientos').select('*').order('fecha', { ascending: false }).order('creado_en', { ascending: false });
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.warn('movimientos query error, using seed defaults:', error?.message);
+        return SEED_MOVEMENTS;
+      }
+      return data || [];
     } else {
       return getLocal('finanzas_movimientos', SEED_MOVEMENTS);
     }
