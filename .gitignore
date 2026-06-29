@@ -34,3 +34,5 @@ scratch/
 *.xlsx
 *.csv
 *.docx
+.vercel
+.env*
