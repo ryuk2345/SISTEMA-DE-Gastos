@@ -1,3 +1,21 @@
+/* =========================================================
+   PRIVACY MODE — Blurs all monetary values site-wide
+   ========================================================= */
+.privacy-mode .tabular-number,
+.privacy-mode .neon-glow {
+  filter: blur(8px);
+  user-select: none;
+  transition: filter 0.3s ease;
+}
+
+/* =========================================================
+   LOADING SPINNER
+   ========================================================= */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
 :root {
   /* Liquid Obsidian & macOS Tahoe - Color Palette */
   --bg-primary: #06070a;

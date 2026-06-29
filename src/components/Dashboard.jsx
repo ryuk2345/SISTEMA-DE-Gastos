@@ -3,7 +3,8 @@ import { dbService } from '../services/dbService';
 import { 
   calcularSemafaroAcumulado, 
   calcularVelocidadGasto, 
-  calcularMoM 
+  calcularMoM,
+  calcularHealthScore
 } from '../utils/financeUtils';
 import { 
   TrendingUp, 
@@ -17,7 +18,7 @@ import {
   X
 } from 'lucide-react';
 
-export default function Dashboard({ refreshTrigger }) {
+export default function Dashboard({ refreshTrigger, privacyMode = false }) {
   const [selectedMonth, setSelectedMonth] = useState('2026-06'); // Default to seed month
   const [movements, setMovements] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -42,6 +43,7 @@ export default function Dashboard({ refreshTrigger }) {
   // Notification Bell states
   const [isBellOpen, setIsBellOpen] = useState(false);
   const [showSummaryAlert, setShowSummaryAlert] = useState(true);
+  const [healthScore, setHealthScore] = useState(null);
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -239,6 +241,10 @@ export default function Dashboard({ refreshTrigger }) {
     }
 
     setGlobalAlerts(alerts);
+
+    // Health Score
+    const hs = calcularHealthScore(allMovs, allCats, cfg, selectedMonth);
+    setHealthScore(hs);
   };
 
   const adjustMonth = (offset) => {
@@ -472,6 +478,32 @@ export default function Dashboard({ refreshTrigger }) {
           </span>
         </div>
       </div>
+
+      {/* 5b. Health Score Compact Widget */}
+      {healthScore && (
+        <div className="glass-panel" style={{ padding: '14px 18px', borderRadius: '20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '16px', border: `1px solid ${healthScore.color}30` }}>
+          <div style={{ position: 'relative', flexShrink: 0 }}>
+            <svg width="52" height="52" viewBox="0 0 52 52">
+              <circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="5" />
+              <circle cx="26" cy="26" r="22" fill="none" stroke={healthScore.color} strokeWidth="5"
+                strokeDasharray={2 * Math.PI * 22}
+                strokeDashoffset={2 * Math.PI * 22 - (healthScore.score / 100) * (2 * Math.PI * 22)}
+                strokeLinecap="round" transform="rotate(-90 26 26)"
+                style={{ filter: `drop-shadow(0 0 5px ${healthScore.color})`, transition: 'stroke-dashoffset 1s ease' }} />
+            </svg>
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="tabular-number" style={{ fontSize: '13px', fontWeight: '900', color: healthScore.color }}>{healthScore.score}</span>
+            </div>
+          </div>
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: healthScore.color }}>{healthScore.nivel}</p>
+            <p style={{ margin: 0, fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>Score de Salud Financiera — {selectedMonth}</p>
+          </div>
+          <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.04)', padding: '4px 8px', borderRadius: '8px' }}>
+            /100
+          </span>
+        </div>
+      )}
 
       {/* 6. Budgets Semáforos Category Listing */}
       <h3 style={{ marginBottom: '16px', fontSize: '16px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>

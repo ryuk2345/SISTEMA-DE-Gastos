@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { dbService } from '../services/dbService';
 import { normalizarMonto } from '../utils/financeUtils';
-import { Plus, Search, Tag, Calendar, AlignLeft, Check, AlertTriangle, Mic, MicOff, X, RefreshCw, ChevronRight } from 'lucide-react';
+import { Plus, Search, Tag, Calendar, AlignLeft, Check, AlertTriangle, Mic, MicOff, X, RefreshCw, ChevronRight, Camera } from 'lucide-react';
 
 export default function QuickForm({ onSaveSuccess, showToast }) {
   const [tipo, setTipo] = useState('gasto');
@@ -27,6 +27,10 @@ export default function QuickForm({ onSaveSuccess, showToast }) {
   // Voice Simulator fallback
   const [isSimModalOpen, setIsSimModalOpen] = useState(false);
   const [simText, setSimText] = useState('');
+
+  // OCR Scanner
+  const [isOcrProcessing, setIsOcrProcessing] = useState(false);
+  const ocrInputRef = React.useRef(null);
 
   const suggestions = {
     gasto: ['Menú almuerzo', 'Combi', 'Starbucks', 'Te marcha', 'Uber', 'Desayuno'],
@@ -269,6 +273,41 @@ export default function QuickForm({ onSaveSuccess, showToast }) {
   };
 
   // -------------------------------------------------------
+  // OCR Ticket Scanner
+  // -------------------------------------------------------
+  const handleOcrScan = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ''; // reset so same file can be selected again
+
+    setIsOcrProcessing(true);
+    showToast('📸 Procesando ticket…');
+
+    try {
+      // Lazy-load Tesseract.js so it doesn't bloat initial bundle
+      const { createWorker } = await import('tesseract.js');
+      const worker = await createWorker('spa', 1, {
+        logger: () => {} // suppress logs
+      });
+      const { data: { text } } = await worker.recognize(file);
+      await worker.terminate();
+
+      if (!text || text.trim().length < 3) {
+        showToast('No se pudo leer el ticket. Intenta con mejor iluminación.');
+        return;
+      }
+
+      console.log('OCR Text:', text);
+      processVoiceResult(text); // Reuse the same voice confirmation modal
+    } catch (err) {
+      console.error('OCR error:', err);
+      showToast('Error al procesar la imagen. Intenta de nuevo.');
+    } finally {
+      setIsOcrProcessing(false);
+    }
+  };
+
+  // -------------------------------------------------------
   // Voice confirm: save directly from modal
   // -------------------------------------------------------
   const handleVoiceConfirmSave = async () => {
@@ -366,25 +405,60 @@ export default function QuickForm({ onSaveSuccess, showToast }) {
           <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Registra ingresos o gastos al instante.</p>
         </div>
 
-        {/* Voice Dictation Button */}
-        <button
-          type="button"
-          onClick={startListening}
-          style={{
-            width: '46px', height: '46px', borderRadius: '50%',
-            background: isListening ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.04)',
-            border: isListening ? '1.5px solid var(--status-critical)' : '1px solid rgba(255,255,255,0.08)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
-            boxShadow: isListening ? '0 0 20px rgba(239,68,68,0.4)' : 'none',
-            transition: 'all 0.3s ease',
-            animation: isListening ? 'pulse 1.4s ease-in-out infinite' : 'none'
-          }}
-        >
-          {isListening
-            ? <MicOff size={20} style={{ color: 'var(--status-critical)' }} />
-            : <Mic size={20} style={{ color: 'var(--text-secondary)' }} />}
-        </button>
+        {/* Voice Dictation Button + OCR Camera Button */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {/* OCR Camera */}
+          <button
+            type="button"
+            onClick={() => ocrInputRef.current?.click()}
+            disabled={isOcrProcessing}
+            title="Escanear ticket"
+            style={{
+              width: '46px', height: '46px', borderRadius: '50%',
+              background: isOcrProcessing ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.04)',
+              border: isOcrProcessing ? '1.5px solid #6366f1' : '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: isOcrProcessing ? 'not-allowed' : 'pointer',
+              boxShadow: isOcrProcessing ? '0 0 16px rgba(99,102,241,0.3)' : 'none',
+              transition: 'all 0.3s ease',
+              animation: isOcrProcessing ? 'pulse 1.4s ease-in-out infinite' : 'none'
+            }}
+          >
+            {isOcrProcessing
+              ? <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2px solid #6366f1', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+              : <Camera size={18} style={{ color: 'var(--text-muted)' }} />}
+          </button>
+
+          {/* Hidden file input — opens camera on iOS */}
+          <input
+            ref={ocrInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: 'none' }}
+            onChange={handleOcrScan}
+          />
+
+          {/* Mic */}
+          <button
+            type="button"
+            onClick={startListening}
+            style={{
+              width: '46px', height: '46px', borderRadius: '50%',
+              background: isListening ? 'rgba(239,68,68,0.15)' : 'rgba(255,255,255,0.04)',
+              border: isListening ? '1.5px solid var(--status-critical)' : '1px solid rgba(255,255,255,0.08)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: isListening ? '0 0 20px rgba(239,68,68,0.4)' : 'none',
+              transition: 'all 0.3s ease',
+              animation: isListening ? 'pulse 1.4s ease-in-out infinite' : 'none'
+            }}
+          >
+            {isListening
+              ? <MicOff size={20} style={{ color: 'var(--status-critical)' }} />
+              : <Mic size={20} style={{ color: 'var(--text-secondary)' }} />}
+          </button>
+        </div>
       </div>
 
       {isListening && (

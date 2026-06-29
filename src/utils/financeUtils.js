@@ -197,3 +197,83 @@ export function calcularMoM(gastadoMesActual, gastadoMesAnterior) {
     texto
   };
 }
+
+/**
+ * Calcula el Score de Salud Financiera (0–100).
+ * - 35 pts: % categorías de gasto dentro de su límite mensual
+ * - 25 pts: tasa de ahorro (ahorro / ingreso * 100), capped al máximo
+ * - 25 pts: presupuesto global no excedido
+ * - 15 pts: consistencia de registro (días con movimientos / días transcurridos)
+ */
+export function calcularHealthScore(movements, categories, config, month) {
+  if (!movements || !categories || !config) return { score: 0, nivel: 'Sin datos', color: '#6b7280', breakdown: {} };
+
+  const monthMovs = movements.filter(m => m.fecha && m.fecha.startsWith(month));
+  const gastoCategories = categories.filter(c => c.tipo === 'gasto' && c.activa && c.presupuesto_mensual > 0);
+
+  // --- 35 pts: categorías dentro de su límite ---
+  let catScore = 0;
+  if (gastoCategories.length > 0) {
+    const catOK = gastoCategories.filter(cat => {
+      const spent = monthMovs
+        .filter(m => m.categoria_id === cat.id)
+        .reduce((s, m) => s + Number(m.monto), 0);
+      return spent <= cat.presupuesto_mensual;
+    }).length;
+    catScore = Math.round((catOK / gastoCategories.length) * 35);
+  }
+
+  // --- 25 pts: tasa de ahorro ---
+  const ingresos = monthMovs
+    .filter(m => { const cat = categories.find(c => c.id === m.categoria_id); return cat && cat.tipo === 'ingreso'; })
+    .reduce((s, m) => s + Number(m.monto), 0);
+  const ahorroMovs = monthMovs
+    .filter(m => { const cat = categories.find(c => c.id === m.categoria_id); return cat && cat.nombre.toLowerCase().includes('ahorro'); })
+    .reduce((s, m) => s + Number(m.monto), 0);
+  const ingresosBase = ingresos > 0 ? ingresos : (config.ingreso_mensual_base || 1500);
+  const tasaAhorro = ingresosBase > 0 ? (ahorroMovs / ingresosBase) * 100 : 0;
+  const ahorroScore = Math.min(25, Math.round((tasaAhorro / 20) * 25)); // 20% ahorro = 25 pts máx
+
+  // --- 25 pts: presupuesto global ---
+  const totalPresupuesto = gastoCategories.reduce((s, c) => s + c.presupuesto_mensual, 0);
+  const totalGastado = monthMovs
+    .filter(m => { const cat = categories.find(c => c.id === m.categoria_id); return cat && cat.tipo === 'gasto'; })
+    .reduce((s, m) => s + Number(m.monto), 0);
+  const ratioGlobal = totalPresupuesto > 0 ? totalGastado / totalPresupuesto : 0;
+  let globalScore = 0;
+  if (ratioGlobal <= 0.9) globalScore = 25;
+  else if (ratioGlobal <= 1.0) globalScore = 15;
+  else if (ratioGlobal <= 1.2) globalScore = 5;
+
+  // --- 15 pts: consistencia de registro ---
+  const { diasTranscurridos } = getDiasCalendario(month);
+  const diasConMovs = new Set(monthMovs.map(m => m.fecha)).size;
+  const consistenciaScore = Math.min(15, Math.round((diasConMovs / Math.max(diasTranscurridos, 1)) * 15));
+
+  const score = Math.min(100, catScore + ahorroScore + globalScore + consistenciaScore);
+
+  let nivel = 'Excelente';
+  let color = '#4de082';
+  if (score < 40) { nivel = 'En riesgo'; color = '#ef4444'; }
+  else if (score < 60) { nivel = 'Regular'; color = '#f59e0b'; }
+  else if (score < 80) { nivel = 'Bueno'; color = '#3b82f6'; }
+
+  return {
+    score,
+    nivel,
+    color,
+    breakdown: { catScore, ahorroScore, globalScore, consistenciaScore }
+  };
+}
+
+/**
+ * Formatea un monto numérico respetando el modo privacidad.
+ * @param {number} amount - El monto a mostrar
+ * @param {boolean} privacyMode - Si es true, retorna "••••"
+ * @param {number} decimals - Decimales a mostrar (default 2)
+ */
+export function formatAmount(amount, privacyMode = false, decimals = 2) {
+  if (privacyMode) return '••••';
+  if (amount === null || amount === undefined || isNaN(amount)) return '0.00';
+  return Number(amount).toFixed(decimals);
+}
