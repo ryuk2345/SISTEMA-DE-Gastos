@@ -4,7 +4,7 @@ import QuickForm from './components/QuickForm';
 import Tarjetas from './components/Tarjetas';
 import Settings from './components/Settings';
 import Analytics from './components/Analytics';
-import { dbService } from './services/dbService';
+import { dbService, warmup } from './services/dbService';
 import { 
   LayoutDashboard, 
   PlusCircle, 
@@ -28,6 +28,11 @@ export default function App() {
   const [isLocked, setIsLocked] = useState(true);
   const [pin, setPin] = useState('');
   const CORRECT_PIN = '1234';
+
+  // Kick off data prefetch immediately — runs while PIN screen is showing
+  useEffect(() => {
+    warmup();
+  }, []);
 
   useEffect(() => {
     if (!isLocked) {

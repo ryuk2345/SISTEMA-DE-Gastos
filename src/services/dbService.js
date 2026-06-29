@@ -8,10 +8,26 @@ let supabase = null;
 
 if (isSupabaseEnabled) {
   supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  console.log("Supabase Client initialized. Running in REMOTE mode.");
+  console.log('Supabase Client initialized. Running in REMOTE mode.');
 } else {
-  console.log("Supabase credentials missing. Running in LOCAL storage mode.");
+  console.log('Supabase credentials missing. Running in LOCAL storage mode.');
 }
+
+// ----------------------------------------
+// In-memory cache (survives re-renders, cleared on mutation)
+// ----------------------------------------
+const _cache = {
+  config: null,
+  categories: null,
+  movements: null,
+  recurrences: null,
+  metas: null
+};
+
+/** Invalidate specific cache keys after a write operation */
+const invalidate = (...keys) => {
+  keys.forEach(k => { _cache[k] = null; });
+};
 
 // ----------------------------------------
 // Local Database Seeds (Embedded)
@@ -101,60 +117,90 @@ const initLocalDb = () => {
 initLocalDb();
 
 // ----------------------------------------
+// Warmup: prefetch critical data in background during PIN screen
+// ----------------------------------------
+export const warmup = async () => {
+  if (!isSupabaseEnabled) return; // localStorage is instant, no need
+  try {
+    // Fire all 3 in parallel — populates cache before user enters PIN
+    const [cfg, cats, movs] = await Promise.all([
+      dbService.getConfig(),
+      dbService.getCategories(),
+      dbService.getMovements()
+    ]);
+    console.log('Warmup complete ✔ config, categories, movements cached');
+  } catch (err) {
+    console.warn('Warmup fetch failed (non-critical):', err?.message);
+  }
+};
+
+// ----------------------------------------
 // Unified Database Operations (API Surface)
 // ----------------------------------------
 export const dbService = {
   // Config Operations
   async getConfig() {
+    if (_cache.config) return _cache.config;  // ⚡ instant from cache
     if (isSupabaseEnabled) {
       const { data, error } = await supabase.from('configuracion').select('*').eq('id', 1).single();
       if (error || !data) {
         console.warn('configuracion table empty or error, using defaults:', error?.message);
-        // Auto-insert default config so next load works
         await supabase.from('configuracion').upsert({ id: 1, ...SEED_CONFIG }).select().single();
+        _cache.config = SEED_CONFIG;
         return SEED_CONFIG;
       }
+      _cache.config = data;
       return data;
     } else {
-      return getLocal('finanzas_configuracion', SEED_CONFIG);
+      const result = getLocal('finanzas_configuracion', SEED_CONFIG);
+      _cache.config = result;
+      return result;
     }
   },
 
   async updateConfig(newConfig) {
+    invalidate('config');
     if (isSupabaseEnabled) {
       const { data, error } = await supabase.from('configuracion').upsert({ id: 1, ...newConfig }).select().single();
       if (error) throw error;
+      _cache.config = data;
       return data;
     } else {
       const current = getLocal('finanzas_configuracion', SEED_CONFIG);
       const updated = { ...current, ...newConfig };
       setLocal('finanzas_configuracion', updated);
+      _cache.config = updated;
       return updated;
     }
   },
 
   // Categories Operations
   async getCategories() {
+    if (_cache.categories) return _cache.categories;  // ⚡ instant from cache
     if (isSupabaseEnabled) {
       const { data, error } = await supabase.from('categorias').select('*').order('nombre', { ascending: true });
       if (error || !data || data.length === 0) {
         console.warn('categorias table empty or error, using seed defaults:', error?.message);
+        _cache.categories = SEED_CATEGORIES;
         return SEED_CATEGORIES;
       }
+      _cache.categories = data;
       return data;
     } else {
-      return getLocal('finanzas_categorias', SEED_CATEGORIES);
+      const result = getLocal('finanzas_categorias', SEED_CATEGORIES);
+      _cache.categories = result;
+      return result;
     }
   },
 
   async createCategory(category) {
+    invalidate('categories');
     const newCategory = {
       id: crypto.randomUUID(),
       creado_en: new Date().toISOString(),
       activa: true,
       ...category
     };
-
     if (isSupabaseEnabled) {
       const { data, error } = await supabase.from('categorias').insert(newCategory).select().single();
       if (error) throw error;
@@ -168,6 +214,7 @@ export const dbService = {
   },
 
   async updateCategory(id, updates) {
+    invalidate('categories');
     if (isSupabaseEnabled) {
       const { data, error } = await supabase.from('categorias').update(updates).eq('id', id).select().single();
       if (error) throw error;
@@ -184,26 +231,30 @@ export const dbService = {
 
   // Movements Operations
   async getMovements() {
+    if (_cache.movements) return _cache.movements;  // ⚡ instant from cache
     if (isSupabaseEnabled) {
       const { data, error } = await supabase.from('movimientos').select('*').order('fecha', { ascending: false }).order('creado_en', { ascending: false });
       if (error) {
         console.warn('movimientos query error, using seed defaults:', error?.message);
         return SEED_MOVEMENTS;
       }
-      return data || [];
+      _cache.movements = data || [];
+      return _cache.movements;
     } else {
-      return getLocal('finanzas_movimientos', SEED_MOVEMENTS);
+      const result = getLocal('finanzas_movimientos', SEED_MOVEMENTS);
+      _cache.movements = result;
+      return result;
     }
   },
 
   async createMovement(movement) {
+    invalidate('movements');  // force fresh fetch next time
     const newMovement = {
       id: crypto.randomUUID(),
       creado_en: new Date().toISOString(),
       origen: 'manual',
       ...movement
     };
-
     if (isSupabaseEnabled) {
       const { data, error } = await supabase.from('movimientos').insert(newMovement).select().single();
       if (error) throw error;
@@ -217,6 +268,7 @@ export const dbService = {
   },
 
   async updateMovement(id, updates) {
+    invalidate('movements');
     if (isSupabaseEnabled) {
       const { data, error } = await supabase.from('movimientos').update(updates).eq('id', id).select().single();
       if (error) throw error;
@@ -232,6 +284,7 @@ export const dbService = {
   },
 
   async deleteMovement(id) {
+    invalidate('movements');
     if (isSupabaseEnabled) {
       const { error } = await supabase.from('movimientos').delete().eq('id', id);
       if (error) throw error;
