@@ -14,10 +14,11 @@ import {
   ChevronRight,
   Shield,
   Award,
-  Wallet
+  Wallet,
+  LogOut
 } from 'lucide-react';
 
-export default function Settings({ refreshTrigger, onUpdate, showToast, onLock }) {
+export default function Settings({ user, refreshTrigger, onUpdate, showToast, onLock, onSignOut }) {
   const [config, setConfig] = useState({
     ingreso_mensual_base: 1500,
     umbral_amarillo_acumulado: 90,
@@ -195,6 +196,9 @@ export default function Settings({ refreshTrigger, onUpdate, showToast, onLock }
     }
   };
 
+  const userEmail = user?.email || 'david@misfinanzas.app';
+  const userInitials = userEmail.substring(0, 2).toUpperCase();
+
   return (
     <div className="settings-container" style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '20px' }}>
       
@@ -205,22 +209,24 @@ export default function Settings({ refreshTrigger, onUpdate, showToast, onLock }
             width: '90px', 
             height: '90px', 
             borderRadius: '50%', 
-            border: '2px solid rgba(255,255,255,0.18)', 
+            border: '2px solid rgba(77,224,130,0.4)', 
             padding: '4px',
-            background: 'rgba(255,255,255,0.02)'
+            background: 'rgba(255,255,255,0.02)',
+            boxShadow: '0 0 20px rgba(77,224,130,0.2)'
           }}>
             <div style={{ 
               width: '100%', 
               height: '100%', 
               borderRadius: '50%', 
-              background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.7) 0%, rgba(6, 182, 212, 0.7) 100%)',
+              background: 'linear-gradient(135deg, rgba(77, 224, 130, 0.7) 0%, rgba(59, 130, 246, 0.7) 100%)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '28px',
-              fontWeight: '800'
+              fontSize: '26px',
+              fontWeight: '800',
+              color: '#fff'
             }}>
-              DS
+              {userInitials}
             </div>
           </div>
           <div style={{ 
@@ -242,10 +248,33 @@ export default function Settings({ refreshTrigger, onUpdate, showToast, onLock }
             ✓
           </div>
         </div>
-        <h2 style={{ fontSize: '20px', fontWeight: '800' }}>David Silva</h2>
-        <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: '700', marginTop: '2px' }}>
-          Miembro Platinum · Desde 2026
+        <h2 style={{ fontSize: '18px', fontWeight: '800', wordBreak: 'break-all' }}>{userEmail}</h2>
+        <p style={{ fontSize: '10px', color: 'var(--status-ok)', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: '800', marginTop: '4px', background: 'rgba(77, 224, 130, 0.1)', padding: '4px 10px', borderRadius: '99px', border: '1px solid rgba(77, 224, 130, 0.2)' }}>
+          Plan Pro SaaS · Suscripción Activa
         </p>
+
+        {onSignOut && (
+          <button
+            onClick={onSignOut}
+            style={{
+              marginTop: '14px',
+              padding: '8px 16px',
+              borderRadius: '12px',
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              color: '#ef4444',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <LogOut size={14} />
+            <span>Cerrar Sesión</span>
+          </button>
+        )}
       </div>
 
       {/* 2. Bento Grid Insights */}

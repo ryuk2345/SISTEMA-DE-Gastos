@@ -138,16 +138,55 @@ export const warmup = async () => {
 // Unified Database Operations (API Surface)
 // ----------------------------------------
 export const dbService = {
+  // Auth Methods (SaaS Multi-tenant)
+  async signUp(email, password) {
+    if (!isSupabaseEnabled) return { data: { user: { email } }, error: null };
+    invalidate('config', 'categories', 'movements', 'recurrences', 'metas');
+    return await supabase.auth.signUp({ email, password });
+  },
+
+  async signIn(email, password) {
+    if (!isSupabaseEnabled) return { data: { user: { email } }, error: null };
+    invalidate('config', 'categories', 'movements', 'recurrences', 'metas');
+    return await supabase.auth.signInWithPassword({ email, password });
+  },
+
+  async signOut() {
+    invalidate('config', 'categories', 'movements', 'recurrences', 'metas');
+    if (!isSupabaseEnabled) return { error: null };
+    return await supabase.auth.signOut();
+  },
+
+  async getCurrentUser() {
+    if (!isSupabaseEnabled) return null;
+    const { data } = await supabase.auth.getUser();
+    return data?.user || null;
+  },
+
+  async getSession() {
+    if (!isSupabaseEnabled) return null;
+    const { data } = await supabase.auth.getSession();
+    return data?.session || null;
+  },
+
+  onAuthStateChange(callback) {
+    if (!isSupabaseEnabled) return { data: { subscription: { unsubscribe: () => {} } } };
+    return supabase.auth.onAuthStateChange(callback);
+  },
+
   // Config Operations
   async getConfig() {
     if (_cache.config) return _cache.config;  // ⚡ instant from cache
     if (isSupabaseEnabled) {
-      const { data, error } = await supabase.from('configuracion').select('*').eq('id', 1).single();
+      const { data, error } = await supabase.from('configuracion').select('*').limit(1).maybeSingle();
       if (error || !data) {
-        console.warn('configuracion table empty or error, using defaults:', error?.message);
-        await supabase.from('configuracion').upsert({ id: 1, ...SEED_CONFIG }).select().single();
-        _cache.config = SEED_CONFIG;
-        return SEED_CONFIG;
+        console.warn('configuracion row missing or error, using defaults:', error?.message);
+        const { data: user } = await supabase.auth.getUser();
+        const userId = user?.user?.id;
+        const newCfg = { ...SEED_CONFIG, ...(userId ? { user_id: userId } : {}) };
+        await supabase.from('configuracion').upsert(newCfg).select().maybeSingle();
+        _cache.config = newCfg;
+        return newCfg;
       }
       _cache.config = data;
       return data;

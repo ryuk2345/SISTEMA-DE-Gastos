@@ -4,6 +4,7 @@ import QuickForm from './components/QuickForm';
 import Tarjetas from './components/Tarjetas';
 import Settings from './components/Settings';
 import Analytics from './components/Analytics';
+import Auth from './components/Auth';
 import { dbService, warmup } from './services/dbService';
 import { 
   LayoutDashboard, 
@@ -24,14 +25,41 @@ export default function App() {
   // Privacy mode — hides all monetary amounts
   const [privacyMode, setPrivacyMode] = useState(false);
   
+  // Auth session states (SaaS Multi-tenant)
+  const [user, setUser] = useState(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+
   // Security PIN states
-  const [isLocked, setIsLocked] = useState(true);
+  const [isLocked, setIsLocked] = useState(false);
   const [pin, setPin] = useState('');
   const CORRECT_PIN = '1234';
 
-  // Kick off data prefetch immediately — runs while PIN screen is showing
   useEffect(() => {
-    warmup();
+    // Check initial auth session
+    async function checkAuth() {
+      try {
+        const currentUser = await dbService.getCurrentUser();
+        setUser(currentUser);
+        if (currentUser) warmup();
+      } catch (err) {
+        console.error('Error checking auth session:', err);
+      } finally {
+        setLoadingAuth(false);
+      }
+    }
+
+    checkAuth();
+
+    // Subscribe to auth state changes
+    const { data: authListener } = dbService.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+      setLoadingAuth(false);
+      if (session?.user) warmup();
+    });
+
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -120,6 +148,19 @@ export default function App() {
 
   const handleBackspace = () => setPin(prev => prev.slice(0, -1));
 
+  // Render Auth screen if not logged in
+  if (loadingAuth) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
+        <div style={{ width: '36px', height: '36px', borderRadius: '50%', border: '3px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--status-ok)', animation: 'spin 0.8s linear infinite' }} />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Auth onAuthSuccess={(u) => { setUser(u); handleUpdate(); }} showToast={showToast} />;
+  }
+
   if (isLocked) {
     return (
       <div className="pin-overlay">
@@ -195,10 +236,16 @@ export default function App() {
         )}
         {activeTab === 'settings' && (
           <Settings 
+            user={user}
             refreshTrigger={refreshTrigger}
             onUpdate={handleUpdate}
             showToast={showToast}
             onLock={() => setIsLocked(true)}
+            onSignOut={async () => {
+              await dbService.signOut();
+              setUser(null);
+              showToast('Sesión cerrada correctamente 🔒');
+            }}
           />
         )}
       </main>
