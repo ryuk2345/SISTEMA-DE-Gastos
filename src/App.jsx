@@ -35,6 +35,11 @@ export default function App() {
   const CORRECT_PIN = '1234';
 
   useEffect(() => {
+    // Safety timeout — never let loadingAuth block render more than 5 seconds
+    const safetyTimeout = setTimeout(() => {
+      setLoadingAuth(false);
+    }, 5000);
+
     // Check initial auth session
     async function checkAuth() {
       try {
@@ -44,6 +49,7 @@ export default function App() {
       } catch (err) {
         console.error('Error checking auth session:', err);
       } finally {
+        clearTimeout(safetyTimeout);
         setLoadingAuth(false);
       }
     }
@@ -58,9 +64,11 @@ export default function App() {
     });
 
     return () => {
+      clearTimeout(safetyTimeout);
       authListener?.subscription?.unsubscribe();
     };
   }, []);
+
 
   useEffect(() => {
     if (!isLocked) {

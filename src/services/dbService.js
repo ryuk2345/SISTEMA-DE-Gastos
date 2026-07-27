@@ -7,8 +7,13 @@ const isSupabaseEnabled = SUPABASE_URL && SUPABASE_ANON_KEY;
 let supabase = null;
 
 if (isSupabaseEnabled) {
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  console.log('Supabase Client initialized. Running in REMOTE mode.');
+  try {
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('Supabase Client initialized. Running in REMOTE mode.');
+  } catch (initErr) {
+    console.error('Supabase createClient failed:', initErr?.message);
+    supabase = null;
+  }
 } else {
   console.log('Supabase credentials missing. Running in LOCAL storage mode.');
 }
@@ -169,9 +174,14 @@ export const dbService = {
   },
 
   async getCurrentUser() {
-    if (!isSupabaseEnabled) return null;
-    const { data } = await supabase.auth.getUser();
-    return data?.user || null;
+    if (!isSupabaseEnabled || !supabase) return null;
+    try {
+      const { data } = await supabase.auth.getUser();
+      return data?.user || null;
+    } catch (err) {
+      console.warn('getCurrentUser error (non-critical):', err?.message);
+      return null;
+    }
   },
 
   async getSession() {
@@ -181,8 +191,13 @@ export const dbService = {
   },
 
   onAuthStateChange(callback) {
-    if (!isSupabaseEnabled) return { data: { subscription: { unsubscribe: () => {} } } };
-    return supabase.auth.onAuthStateChange(callback);
+    if (!isSupabaseEnabled || !supabase) return { data: { subscription: { unsubscribe: () => {} } } };
+    try {
+      return supabase.auth.onAuthStateChange(callback);
+    } catch (err) {
+      console.warn('onAuthStateChange error:', err?.message);
+      return { data: { subscription: { unsubscribe: () => {} } } };
+    }
   },
 
   // Config Operations
