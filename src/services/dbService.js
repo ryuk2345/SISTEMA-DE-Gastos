@@ -211,7 +211,15 @@ export const dbService = {
   async updateConfig(newConfig) {
     invalidate('config');
     if (isSupabaseEnabled) {
-      const { data, error } = await supabase.from('configuracion').upsert({ id: 1, ...newConfig }).select().single();
+      // Get current user id to upsert by user_id (multi-tenant: each user has one config row)
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) throw new Error('Usuario no autenticado');
+      const { data, error } = await supabase
+        .from('configuracion')
+        .upsert({ ...newConfig, user_id: userId }, { onConflict: 'user_id' })
+        .select()
+        .single();
       if (error) throw error;
       _cache.config = data;
       return data;
