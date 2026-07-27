@@ -151,6 +151,17 @@ export const dbService = {
     return await supabase.auth.signInWithPassword({ email, password });
   },
 
+  async signInWithGoogle() {
+    if (!isSupabaseEnabled) return { data: null, error: new Error('Supabase no está configurado') };
+    invalidate('config', 'categories', 'movements', 'recurrences', 'metas');
+    return await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+  },
+
   async signOut() {
     invalidate('config', 'categories', 'movements', 'recurrences', 'metas');
     if (!isSupabaseEnabled) return { error: null };
